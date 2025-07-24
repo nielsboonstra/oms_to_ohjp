@@ -125,7 +125,7 @@ with st.sidebar:
     # Vraag gebruiker om een lijst te uploaden om objecten in de upload te matchen met een complex
 
     st.markdown("**2. Upload een lijst met objecten om te matchen met een complex:** 👇")
-    file_object_complex = st.file_uploader("Kies een bestand met objecten", type=["xlsx"])
+    file_object_complex = st.file_uploader("Kies een bestand met objecten. De kolomnamen moeten staan in de bovenste rij van het Excel-bestand.", type=["xlsx"])
     if file_object_complex is not None:
         df_object_complex = load_excel(file_object_complex, header=0)
         # Ask user to select the column with the object names
