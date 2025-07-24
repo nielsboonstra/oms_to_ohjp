@@ -4,6 +4,7 @@ import regex as re
 
 st.set_page_config(page_title="OMS naar OHJP Conversie Tool", layout="wide")
 
+@st.cache_data
 def load_excel(file, header=0):
     try:
         df = pd.read_excel(file, engine='openpyxl', header=header)
