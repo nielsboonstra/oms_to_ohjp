@@ -133,7 +133,7 @@ with st.sidebar:
         # Ask user to select the column with the complex names
         complex_name_column = st.selectbox("Kies de kolom met complexnamen:", df_object_complex.columns, index=None)
         if object_name_column and complex_name_column:
-            df_object_complex.columns = [object_name_column, complex_name_column]
+            df_object_complex = df_object_complex[[object_name_column, complex_name_column]]
             df_object_complex.set_index([object_name_column], inplace=True)
 
     if uploaded_file is not None and file_object_complex is not None:
@@ -202,8 +202,8 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
                 for complex, heatmap_df in heatmap_dfs_complex.items():
                     heatmap_df = heatmap_df.drop(columns="Complex")
                     heatmap_df.to_excel(writer, sheet_name=complex, index=False)
-        st.success(f"Conversie voltooid! De OHJP-gegevens zijn lokaal opgeslagen in '{naam_export}.xlsx'.")
-        st.write("Je kunt het bestand ook downloaden via de onderstaande knop:")
+        st.success(f"Conversie voltooid! De OHJP-gegevens worden opgeslagen als '{naam_export}.xlsx'.")
+        st.write("Je kunt het bestand downloaden via de onderstaande knop:")
         st.download_button(
             label="Download OHJP Excel-bestand",
             data=open(f'{naam_export}.xlsx', 'rb').read(),
