@@ -112,7 +112,7 @@ def create_heatmap_df(df, start_week=1):
 st.title("🗓️ OMS naar OHJP Conversie Tool")
 
 st.write("Deze tool helpt jou met het omzetten van een OMS-export uit Maximo naar een OHJP-worksheet" \
-"voor het opzetten van een onderhoudsjaarplan.")
+" voor het opzetten van een onderhoudsjaarplan.")
 
 with st.sidebar:
     st.markdown("**1. Upload een OMS-exportbestand (Excel-format) om te beginnen:** 👇")
@@ -210,6 +210,5 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
             file_name=f'{naam_export}.xlsx',
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
+        st.write("Kopieer en plak de inhoud van de Excel per worksheet naar een OHJP-template dat past bij jouw wensen.")
         st.balloons()  # Show balloons to celebrate the successful conversion
-st.markdown("---")
-st.markdown("Deze tool is ontwikkeld door Niels Boonstra | Vragen? [Stuur een e-mail](mailto:niels.boonstra@bam.com)")
