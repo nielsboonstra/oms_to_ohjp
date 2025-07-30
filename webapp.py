@@ -212,7 +212,9 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
             for complex in complexes:
                 # Filter the dataframe for the current traject
                 filtered_df = df[df['Complex'] == complex]
-                heatmap_dfs_complex[complex] = (adapt_to_version(create_heatmap_df(filtered_df,start_week=start_week), version=1 if version_export == "1: Definitieve versie" else 2))
+                complex_df = create_heatmap_df(filtered_df,start_week=start_week)
+                complex_df = adapt_to_version(complex_df, version=1 if version_export == "1: Definitieve versie" else 2)
+                heatmap_dfs_complex[complex] = complex_df
 
             # Save the heatmap dataframes to separate Excel worksheets with the name of the traject
             with pd.ExcelWriter(f'{naam_export}.xlsx') as writer:
