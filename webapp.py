@@ -62,7 +62,7 @@ def filter_columns(df):
     """
     column_list = ['Type', 'Omschrijving', 'Taakplan omschrijving',
        'Locatie omschrijving', 'Startdatum', 'Einddatum', 'Startdatum wk',
-       'Einddatum wk', 'PMnum', 'Interval', 'Eenheid']
+       'Einddatum wk', 'PMnum', 'Interval', 'Eenheid', 'Nummer', 'Taakplannr.']
     #If one of the columns is not present in the DataFrame, return an error message
     for column in column_list:
         if column not in df.columns:
@@ -95,7 +95,7 @@ def create_heatmap_df(df, start_week=1):
             heatmap_df[week] = 0
     
     #Find metadata (Frequentie aantal, Frequentie, Uitvoerende) and add it to the heatmap_df. Using the first occurrence of the metadata in the original dataframe. Add the metadata to the heatmap_df as new columns.
-    metadata = df[['Complex', 'Omschrijving', 'Taakplan omschrijving', 'Object', 'Interval', 'Eenheid', 'PMnum', 'Uitvoerende']].drop_duplicates(subset=['PMnum', 'Interval'])
+    metadata = df[['Complex', 'Omschrijving', 'Taakplan omschrijving', 'Object', 'Interval', 'Eenheid', 'PMnum', 'Uitvoerende', 'Nummer', 'Taakplannr.', 'Route']].drop_duplicates(subset=['PMnum', 'Interval'])
     
 
     heatmap_df = heatmap_df.merge(metadata, on=['PMnum', 'Interval'], how='left')
@@ -103,9 +103,22 @@ def create_heatmap_df(df, start_week=1):
     #sort week_numbers starting with start_week to 52, then 1 to start_week-1
     week_numbers = [week for week in week_numbers[start_week-1:] + week_numbers[:start_week-1]]
     # Sort columns: metadata first, then week numbers
-    cols = ["Complex", "Object", 'Omschrijving', 'Interval', 'Uitvoerende', 'Taakplan omschrijving'] + week_numbers
+    cols = ["Complex", "Object", 'Omschrijving', 'Interval', 'Uitvoerende', 'Taakplan omschrijving', 'Nummer', 'Taakplannr.', 'Route'] + week_numbers
     heatmap_df = heatmap_df[cols]
 
+    return heatmap_df
+
+def adapt_to_version(heatmap_df, version=1):
+    """Adapt the code to the latest version of the OMS to OHJP conversion tool."""
+    # This function can be used to adapt the code to the latest version of the OMS to OHJP conversion tool.
+    if version == 1:
+        # Remove columns 'Nummer' and 'Taakplannr.' if they exist
+        if 'Nummer' in heatmap_df.columns:
+            heatmap_df = heatmap_df.drop(columns=['Nummer'])
+        if 'Taakplannr.' in heatmap_df.columns:
+            heatmap_df = heatmap_df.drop(columns=['Taakplannr.'])
+        if 'Route' in heatmap_df.columns:
+            heatmap_df = heatmap_df.drop(columns=['Route'])
     return heatmap_df
 
 
@@ -158,6 +171,7 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
     start_year = st.number_input("Kies het startjaar voor de planning:", min_value=2025, max_value=2100)
     start_week = st.number_input("Kies de startweek voor de planning:", min_value=1, max_value=52, value=36)
     naam_export = st.text_input("Kies de naam voor het exportbestand (zonder extensie):", value="OHJP [X]e contractjaar [PROJECT]")
+    version_export = st.pills("Kies de versie van de OHJP-export:", ["1: Definitieve versie", "2: Tijdelijke versie met kolommen 'Nummer', 'Taakplannr.' en 'Route'"], default="1: Definitieve versie")
 
     if st.button("Start conversie"):
         with st.spinner("Bezig met het converteren van de OMS-export naar OHJP...", show_time=True):
@@ -188,6 +202,9 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
                 st.warning(f"Er zijn taken gepland na week {start_week} van {start_year + 1}. Deze worden niet meegenomen in de planning.")
             df = df[df["Startdatum wk"].astype(str) < week_threshold] # Remove rows
 
+            # TEMP: Add column 'Route' with empty values
+            df['Route'] = ''
+
             #Create Heatmap df's per object.
             complexes = df['Complex'].unique()
             heatmap_dfs_complex = {}
@@ -195,7 +212,7 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
             for complex in complexes:
                 # Filter the dataframe for the current traject
                 filtered_df = df[df['Complex'] == complex]
-                heatmap_dfs_complex[complex] = (create_heatmap_df(filtered_df,start_week=start_week))
+                heatmap_dfs_complex[complex] = (adapt_to_version(create_heatmap_df(filtered_df,start_week=start_week), version=1 if version_export == "1: Definitieve versie" else 2))
 
             # Save the heatmap dataframes to separate Excel worksheets with the name of the traject
             with pd.ExcelWriter(f'{naam_export}.xlsx') as writer:
