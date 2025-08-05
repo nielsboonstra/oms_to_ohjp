@@ -47,6 +47,9 @@ def extract_uitvoerende(row):
     :param row: A row of the DataFrame.
     :return: The modified row with the executing party extracted.
     """
+    if len(row['Omschrijving']) == 0 or len(row['Taakplan omschrijving']) == 0: # If one of the columns is empty, set 'Uitvoerende' to empty string
+        row['Uitvoerende'] = ''
+        return row
     if re.search(r'\bLEV\b', row['Omschrijving'], flags=re.IGNORECASE) or re.search(r'\bLEV\b', row['Taakplan omschrijving'], flags=re.IGNORECASE):
         row['Uitvoerende'] = 'Leverancier'
     elif re.search(r'\bOA\b', row['Omschrijving'], flags=re.IGNORECASE) or re.search(r'\bOA\b', row['Taakplan omschrijving'], flags=re.IGNORECASE):
