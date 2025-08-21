@@ -195,9 +195,9 @@ with st.sidebar:
         if file_object_complex is not None:
             df_object_complex = load_excel(file_object_complex, header=0)
             # Ask user to select the column with the object names
-        object_name_column = st.selectbox("Kies de kolom met objectnamen:", df_object_complex.columns, index=None)
-        # Ask user to select the column with the complex names
-        complex_name_column = st.selectbox("Kies de kolom met complexnamen:", df_object_complex.columns, index=None)
+            object_name_column = st.selectbox("Kies de kolom met objectnamen:", df_object_complex.columns, index=None)
+            # Ask user to select the column with the complex names
+            complex_name_column = st.selectbox("Kies de kolom met complexnamen:", df_object_complex.columns, index=None)
         if object_name_column and complex_name_column:
             df_object_complex = df_object_complex[[object_name_column, complex_name_column]]
             df_object_complex.set_index([object_name_column], inplace=True)
@@ -213,8 +213,8 @@ with st.sidebar:
         st.markdown("**2. Selecteer de kolom met objecten in de Excel:** 👇")
         vitaal = st.checkbox("Maak je een OHJP voor VITAAL?", key="vitaal_checkbox")
         if vitaal:
+            complex_name_column = st.selectbox("Kies de kolom met complexnamen:", df.columns, index=None)
             st.info("De objecten worden automatisch gemapt voor VITAAL-complexen. Dit gebeurt op de achtergrond middels een voor VITAAL ontwikkeld algoritme.", icon="🏃")
-            complex_name_column = st.selectbox("Kies zelf nog de kolom met complexnamen:", df.columns, index=None)
             df["Object"] = vitaal_extract_objects(df["Traject"], df["Omschrijving"])
             st.session_state['complex_mapping'] = False
         else:
