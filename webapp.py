@@ -184,13 +184,12 @@ with st.sidebar:
     header_row = st.number_input("Kies de rij waar de kolomnamen staan in je Excel (standaard is 0)", min_value=0, value=0)
     if uploaded_file is not None:
         df = load_excel(uploaded_file, header=header_row)
-        if df is not None:
-            st.session_state['df'] = df
+        st.session_state['df'] = df
     
-    # TO DO: Implementeer keuze voor gebruiker of complexen al in de Excel staan, of dat deze apart geüpload moeten worden
+    # Geef keuze voor gebruiker of complexen al in de Excel staan, of dat deze apart geüpload moeten worden
     complex_mapping_type = st.radio("Kies hoe je de complexen wilt aanleveren:", ("Als kolom in de Excel", "Apart bestand"))
 
-    if complex_mapping_type == "Apart bestand": # Vraag gebruiker om een lijst te uploaden om objecten in de upload te matchen met een complex
+    if complex_mapping_type == "Apart bestand" and uploaded_file is not None: # Vraag gebruiker om een lijst te uploaden om objecten in de upload te matchen met een complex
         st.markdown("**2. Upload een lijst met objecten om te matchen met een complex:** 👇")
         file_object_complex = st.file_uploader("Kies een bestand met objecten. De kolomnamen moeten staan in de bovenste rij van het Excel-bestand.", type=["xlsx"])
         if file_object_complex is not None:
@@ -210,7 +209,7 @@ with st.sidebar:
                 st.success("Beide bestanden zijn succesvol geüpload! Je kunt nu de stappen rechts volgen om de conversie uit te voeren.")
                 st.session_state['complex_mapping'] = df_object_complex
 
-    elif complex_mapping_type == "Als kolom in de Excel":
+    elif complex_mapping_type == "Als kolom in de Excel" and uploaded_file is not None:
         st.markdown("**2. Selecteer de kolom met objecten in de Excel:** 👇")
         vitaal = st.checkbox("Maak je een OHJP voor VITAAL?", key="vitaal_checkbox")
         if vitaal:
