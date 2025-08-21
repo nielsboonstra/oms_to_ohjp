@@ -187,7 +187,8 @@ with st.sidebar:
         st.session_state['df'] = df
     
     # Geef keuze voor gebruiker of complexen al in de Excel staan, of dat deze apart geüpload moeten worden
-    complex_mapping_type = st.radio("Kies hoe je de complexen wilt aanleveren:", ("Als kolom in de Excel", "Apart bestand"))
+    if uploaded_file is not None:
+        complex_mapping_type = st.radio("Kies hoe je de complexen wilt aanleveren:", ("Als kolom in de Excel", "Apart bestand"))
 
     if complex_mapping_type == "Apart bestand" and uploaded_file is not None: # Vraag gebruiker om een lijst te uploaden om objecten in de upload te matchen met een complex
         st.markdown("**2. Upload een lijst met objecten om te matchen met een complex:** 👇")
@@ -198,16 +199,16 @@ with st.sidebar:
             object_name_column = st.selectbox("Kies de kolom met objectnamen:", df_object_complex.columns, index=None)
             # Ask user to select the column with the complex names
             complex_name_column = st.selectbox("Kies de kolom met complexnamen:", df_object_complex.columns, index=None)
-        if object_name_column and complex_name_column:
-            df_object_complex = df_object_complex[[object_name_column, complex_name_column]]
-            df_object_complex.set_index([object_name_column], inplace=True)
-        if uploaded_file is not None and file_object_complex is not None:
-            if object_name_column is None or complex_name_column is None:
-                st.error("Zorg ervoor dat je zowel de kolom met objectnamen als de kolom met complexnamen hebt geselecteerd.")
-            else:
-                # Show success message
-                st.success("Beide bestanden zijn succesvol geüpload! Je kunt nu de stappen rechts volgen om de conversie uit te voeren.")
-                st.session_state['complex_mapping'] = df_object_complex
+            if object_name_column and complex_name_column:
+                df_object_complex = df_object_complex[[object_name_column, complex_name_column]]
+                df_object_complex.set_index([object_name_column], inplace=True)
+            if uploaded_file is not None and file_object_complex is not None:
+                if object_name_column is None or complex_name_column is None:
+                    st.error("Zorg ervoor dat je zowel de kolom met objectnamen als de kolom met complexnamen hebt geselecteerd.")
+                else:
+                    # Show success message
+                    st.success("Beide bestanden zijn succesvol geüpload! Je kunt nu de stappen rechts volgen om de conversie uit te voeren.")
+                    st.session_state['complex_mapping'] = df_object_complex
 
     elif complex_mapping_type == "Als kolom in de Excel" and uploaded_file is not None:
         st.markdown("**2. Selecteer de kolom met objecten in de Excel:** 👇")
