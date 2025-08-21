@@ -289,7 +289,7 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
                 complex_df = create_heatmap_df(filtered_df,start_week=start_week)
                 complex_df = adapt_to_version(complex_df, version=1 if version_export == "1: Definitieve versie" else 2)
                 heatmap_dfs_complex[complex] = complex_df
-
+            st.dataframe(complex_df)  # Show the heatmap dataframes in the app for debugging purposes
             # Save the heatmap dataframes to separate Excel worksheets with the name of the traject
             with pd.ExcelWriter(f'{naam_export}.xlsx') as writer:
                 for complex, heatmap_df in heatmap_dfs_complex.items():
