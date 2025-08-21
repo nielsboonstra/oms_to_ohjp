@@ -25,14 +25,14 @@ def normalize_frequency(row):
         row["Interval"] = 0
     elif type(row["Eenheid"]) != str:  # If Eenheid is not a string, set it to empty string
         row["Eenheid"] = ""
-    
-    if row["Eenheid"].str.lower().isin(["weeks", "wk"]):
+
+    if str(row["Eenheid"]).lower() in ["weeks", "wk"]:
         row["Interval"] = row["Interval"] * 0.25
         row["Eenheid"] = "months"
-    elif row["Eenheid"].str.lower().isin(["years"]):
+    elif str(row["Eenheid"]).lower() in ["years"]:
         row["Interval"] = row["Interval"] * 12
         row["Eenheid"] = "months"
-    elif row["Eenheid"].str.lower().isin(["days"]):
+    elif str(row["Eenheid"]).lower() in ["days"]:
         if row["Interval"] == 365:
             row["Interval"] = 12
         else:
