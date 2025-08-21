@@ -21,25 +21,30 @@ def normalize_frequency(row):
     :param row: A row of the DataFrame.
     :return: The modified row with normalized frequency.
     """
-
-    if row["Eenheid"] == "WEEKS":
+    if type(row["Interval"]) != int and type(row["Interval"]) != float:  # If Interval is not a number, set it to 0
+        row["Interval"] = 0
+    elif type(row["Eenheid"]) != str:  # If Eenheid is not a string, set it to empty string
+        row["Eenheid"] = ""
+    
+    if row["Eenheid"].str.lower().isin(["weeks", "wk"]):
         row["Interval"] = row["Interval"] * 0.25
-        row["Eenheid"] = "MONTHS"
-    elif row["Eenheid"] == "YEARS":
+        row["Eenheid"] = "months"
+    elif row["Eenheid"].str.lower().isin(["years"]):
         row["Interval"] = row["Interval"] * 12
-        row["Eenheid"] = "MONTHS"
-    elif row["Eenheid"] == "DAYS":
+        row["Eenheid"] = "months"
+    elif row["Eenheid"].str.lower().isin(["days"]):
         if row["Interval"] == 365:
             row["Interval"] = 12
         else:
             row["Interval"] = (round((row["Interval"] / 30),2))
-            row["Eenheid"] = "MONTHS"
+            row["Eenheid"] = "months"
     return row
 
 def extract_uitvoerende(row):
     """Extract the executing party from the 'Omschrijving' and 'Taakplan omschrijving' column.
+    This function is written for the SAEM contract.
 
-    Possible key words in string:
+    Possible key words to search for in Omschrijving and Taakplan Omschrijving strings:
 
     - LEV : Leverancier
     - OA : Onderaannemer
@@ -90,7 +95,6 @@ def create_heatmap_df(df, start_week=1):
     for week in week_numbers:
         df[str(week)] = 0
 
-
     # Create a pivot table with "Omschrijving" as index, "Week" as columns, and count of occurrences as values
     heatmap_df = df.pivot_table(index=['PMnum', 'Interval'], columns='Week', aggfunc='size', fill_value=0)
     heatmap_df = heatmap_df.reset_index()
@@ -103,7 +107,6 @@ def create_heatmap_df(df, start_week=1):
     #Find metadata (Frequentie aantal, Frequentie, Uitvoerende) and add it to the heatmap_df. Using the first occurrence of the metadata in the original dataframe. Add the metadata to the heatmap_df as new columns.
     metadata = df[['Complex', 'Omschrijving', 'Taakplan omschrijving', 'Object', 'Interval', 'Eenheid', 'PMnum', 'Uitvoerende', 'Nummer', 'Taakplannr.', 'Route']].drop_duplicates(subset=['PMnum', 'Interval'])
     
-
     heatmap_df = heatmap_df.merge(metadata, on=['PMnum', 'Interval'], how='left')
 
     #sort week_numbers starting with start_week to 52, then 1 to start_week-1
@@ -127,6 +130,48 @@ def adapt_to_version(heatmap_df, version=1):
             heatmap_df = heatmap_df.drop(columns=['Route'])
     return heatmap_df
 
+def vitaal_extract_objects(traject_complex_list : list, omschrijving_list : list) -> list:
+    """
+    Extract the object of interest from the list of trajects and complexen.
+    
+    :param traject_complex_list: List of trajects and complexen.
+    :param omschrijving_list: List of omschrijvingen.
+    :return: List of objects.
+    """
+
+    objects = []
+    is_complex  = []
+
+    for i, item in enumerate(traject_complex_list):
+        if 'complex' in item.lower(): # If string contains 'complex', add part of string after 'complex' to the list. E.g., 'Stuw- en sluiscomplex Amerongen' becomes 'Amerongen'.
+            objects.append(item.split('complex')[-1].strip())
+            is_complex.append(True) # Object of interest is a complex.
+        elif 'verkeerscentrale' in item.lower(): # Verkeerscentrales are out of scope for the OHJP.
+            if 'waalbrug' in omschrijving_list[i].lower(): # Exception: Waalbrug falls under the verkeerscentrale category in the decomposition, but is within scope.
+                # Add Waalbrug to the list of objects and set is_complex to False.
+                objects.append('Waalbrug')
+                is_complex.append(False)
+            else:
+                objects.append(-1) # Mark as -1, so it can be easily filtered out later.
+                is_complex.append(False)
+        elif "eilandbrug" in item.lower(): # Eilandbrug is a complex, but does not contain 'complex' in the string. Add manually to complex list.
+            objects.append('Eilandbrug')
+            is_complex.append(True)
+        else:
+            #Look for object in omschrijving_list. It can be assumed that the object can be found after the first '-' in the string.
+            # If the object cannot be found, raise an error.
+            if '-' in omschrijving_list[i]:
+                object = omschrijving_list[i].split('-')[1].strip()
+                # If a '/' is present in the object string, split the string and take the first part.
+                if '/' in object:
+                    object = object.split('/')[0].strip()
+                if object == '':
+                    raise ValueError(f"Object not found in {omschrijving_list[i]}. Is the Ultimo job named correctly?") # Raise error if no object could be found in an Ultimo job
+                else:
+                    objects.append(object)
+                    is_complex.append(False)
+    return objects, is_complex
+
 
 st.title("🗓️ OMS naar OHJP Conversie Tool")
 
@@ -141,27 +186,46 @@ with st.sidebar:
         df = load_excel(uploaded_file, header=header_row)
         if df is not None:
             st.session_state['df'] = df
-    # Vraag gebruiker om een lijst te uploaden om objecten in de upload te matchen met een complex
+    
+    # TO DO: Implementeer keuze voor gebruiker of complexen al in de Excel staan, of dat deze apart geüpload moeten worden
+    complex_mapping_type = st.radio("Kies hoe je de complexen wilt aanleveren:", ("Als kolom in de Excel", "Apart bestand"))
 
-    st.markdown("**2. Upload een lijst met objecten om te matchen met een complex:** 👇")
-    file_object_complex = st.file_uploader("Kies een bestand met objecten. De kolomnamen moeten staan in de bovenste rij van het Excel-bestand.", type=["xlsx"])
-    if file_object_complex is not None:
-        df_object_complex = load_excel(file_object_complex, header=0)
-        # Ask user to select the column with the object names
+    if complex_mapping_type == "Apart bestand": # Vraag gebruiker om een lijst te uploaden om objecten in de upload te matchen met een complex
+        st.markdown("**2. Upload een lijst met objecten om te matchen met een complex:** 👇")
+        file_object_complex = st.file_uploader("Kies een bestand met objecten. De kolomnamen moeten staan in de bovenste rij van het Excel-bestand.", type=["xlsx"])
+        if file_object_complex is not None:
+            df_object_complex = load_excel(file_object_complex, header=0)
+            # Ask user to select the column with the object names
         object_name_column = st.selectbox("Kies de kolom met objectnamen:", df_object_complex.columns, index=None)
         # Ask user to select the column with the complex names
         complex_name_column = st.selectbox("Kies de kolom met complexnamen:", df_object_complex.columns, index=None)
         if object_name_column and complex_name_column:
             df_object_complex = df_object_complex[[object_name_column, complex_name_column]]
             df_object_complex.set_index([object_name_column], inplace=True)
+        if uploaded_file is not None and file_object_complex is not None:
+            if object_name_column is None or complex_name_column is None:
+                st.error("Zorg ervoor dat je zowel de kolom met objectnamen als de kolom met complexnamen hebt geselecteerd.")
+            else:
+                # Show success message
+                st.success("Beide bestanden zijn succesvol geüpload! Je kunt nu de stappen rechts volgen om de conversie uit te voeren.")
+                st.session_state['complex_mapping'] = df_object_complex
 
-    if uploaded_file is not None and file_object_complex is not None:
-        if object_name_column is None or complex_name_column is None:
-            st.error("Zorg ervoor dat je zowel de kolom met objectnamen als de kolom met complexnamen hebt geselecteerd.")
+    elif complex_mapping_type == "Als kolom in de Excel":
+        st.markdown("**2. Selecteer de kolom met objecten in de Excel:** 👇")
+        vitaal = st.checkbox("Maak je een OHJP voor VITAAL?", key="vitaal_checkbox")
+        if vitaal:
+            st.info("De objecten worden automatisch gemapt voor VITAAL-complexen. Dit gebeurt op de achtergrond middels een voor VITAAL ontwikkeld algoritme.", icon="🏃")
+            complex_name_column = st.selectbox("Kies zelf nog de kolom met complexnamen:", df.columns, index=None)
+            df["Object"] = vitaal_extract_objects(df["Traject"], df["Omschrijving"])
+            st.session_state['complex_mapping'] = False
         else:
-            # Show success message
-            st.success("Beide bestanden zijn succesvol geüpload! Je kunt nu de stappen rechts volgen om de conversie uit te voeren.")
-            st.session_state['complex_mapping'] = df_object_complex
+            object_name_column = st.selectbox("Kies de kolom met objectnamen:", df.columns, index=None)
+            complex_name_column = st.selectbox("Kies de kolom met complexnamen:", df.columns, index=None)
+            if object_name_column and complex_name_column:
+                df = df.rename(columns={object_name_column: "Object", complex_name_column: "Complex"}, inplace=True)
+                st.session_state['complex_mapping'] = False
+        if st.session_state.get('complex_mapping') == False:
+            st.success("De kolommen zijn succesvol geselecteerd! Je kunt nu de stappen rechts volgen om de conversie uit te voeren.")
 
 #On the main page, give user the option to preview both uploaded files that can be hidden/collapsed by clicking on an arrow
 if 'df' in st.session_state:
@@ -172,20 +236,25 @@ if 'complex_mapping' in st.session_state:
         st.dataframe(st.session_state['complex_mapping'])
 
 if 'df' in st.session_state and 'complex_mapping' in st.session_state:
+    col_vars = {}
     st.markdown("**Start de conversie naar OHJP:**")
     # Ask user for start year and start week for the planning
-    start_year = st.number_input("Kies het startjaar voor de planning:", min_value=2025, max_value=2100)
+    start_year = st.number_input("Kies het startjaar voor de planning:", min_value=2020, max_value=2100)
     start_week = st.number_input("Kies de startweek voor de planning:", min_value=1, max_value=52, value=36)
     naam_export = st.text_input("Kies de naam voor het exportbestand (zonder extensie):", value="OHJP [X]e contractjaar [PROJECT]")
     version_export = st.pills("Kies de versie van de OHJP-export:", ["1: Definitieve versie", "2: Tijdelijke versie met kolommen 'Nummer', 'Taakplannr.' en 'Route'"], default="1: Definitieve versie")
+    extract_uitvoerende_bool = st.checkbox("Wil je de uitvoerende partij extraheren uit de omschrijving? [SAEM-only]", value=False)
+
+    col_vars["Omschrijving"] = st.selectbox("Kies de kolom met omschrijvingen:", df.columns, index=None)
 
     if st.button("Start conversie"):
         with st.spinner("Bezig met het converteren van de OMS-export naar OHJP...", show_time=True):
             df = st.session_state['df']
             df = filter_columns(df)
-            df = df.dropna(subset=["Omschrijving"]) #If Omschrijving is empty, drop row
+            df = df.dropna(subset=col_vars["Omschrijving"]) #If Omschrijving is empty, drop row
             df = df.apply(normalize_frequency, axis=1) # Transform all frequencies that are not in Months to Months
-            df = df.apply(extract_uitvoerende, axis=1) # Extract executing party from Omschrijving
+            if extract_uitvoerende_bool:
+                df = df.apply(extract_uitvoerende, axis=1) # Extract executing party from Omschrijving
             df['Complex'] = df['Object'].map(df_object_complex[complex_name_column])
             #Turn Startdatum and Einddatum wk into integers
             df["Startdatum wk"] = df["Startdatum wk"].astype(int)
