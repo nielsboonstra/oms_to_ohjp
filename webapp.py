@@ -187,8 +187,7 @@ with st.sidebar:
         st.session_state['df'] = df
     
     # Geef keuze voor gebruiker of complexen al in de Excel staan, of dat deze apart geüpload moeten worden
-    if uploaded_file is not None:
-        complex_mapping_type = st.radio("Kies hoe je de complexen wilt aanleveren:", ("Als kolom in de Excel", "Apart bestand"))
+    complex_mapping_type = st.radio("Kies hoe je de complexen wilt aanleveren:", ("Als kolom in de Excel", "Apart bestand"))
 
     if complex_mapping_type == "Apart bestand" and uploaded_file is not None: # Vraag gebruiker om een lijst te uploaden om objecten in de upload te matchen met een complex
         st.markdown("**2. Upload een lijst met objecten om te matchen met een complex:** 👇")
