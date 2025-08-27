@@ -11,7 +11,7 @@ def explanation_dialog():
     st.markdown("1. Een Excel-export vanuit Maximo.")
     st.markdown("2. Een Excel-bestand met een Object-Complex mapping (zie het als een kleine decompositie van welke objecten onder welk complex hangen).")
     st.markdown("Zorg ervoor dat deze bestanden de juiste structuur hebben, met in ieder geval de volgende elementen:")
-    st.markdown("- **Voor de OMS-export:** De kolommen _Omschrijving, _Taakplan omschrijving, Startdatum wk, Einddatum wk, PMnum, Interval_ en _Eenheid_")
+    st.markdown("- **Voor de OMS-export:** De kolommen _Omschrijving, Taakplan omschrijving, Startdatum wk, Einddatum wk, PMnum, Interval_ en _Eenheid_")
     st.markdown("- **Voor de Object-Complex mapping:** Een Excel met twee kolommen, waarvan één kolom de objecten bevat met exact dezelfde naam als in de OMS-export, met daarnaast een tweede kolom die het bijbehorende complex representeert.")
     st.divider()
     st.markdown("### Output")
@@ -196,7 +196,7 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
     start_week = st.number_input("Kies de startweek voor de planning:", min_value=1, max_value=52, value=36)
     naam_export = st.text_input("Kies de naam voor het exportbestand (zonder extensie):", value="OHJP [X]e contractjaar [PROJECT]")
     version_export = st.pills("Kies de versie van de OHJP-export:", ["1: Definitieve versie", "2: Tijdelijke versie met kolommen 'Nummer', 'Taakplannr.' en 'Route'"], default="1: Definitieve versie")
-    saem_extract_uitvoerende = st.checkbox("🌊 SAEM-only: Zoek de uitvoerende partijen (LEV/OA) in de exportregels", value=True,)
+    extr_uitvoerende_bool = st.checkbox("Zoek de uitvoerende partijen (LEV/OA) in de exportregels", value=True,)
 
     if st.button("Start conversie"):
         with st.spinner("Bezig met het converteren van de OMS-export naar OHJP...", show_time=True):
@@ -204,7 +204,7 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
             df = filter_columns(df)
             df = df.dropna(subset=["Omschrijving"]) #If Omschrijving is empty, drop row
             df = df.apply(normalize_frequency, axis=1) # Transform all frequencies that are not in Months to Months
-            if saem_extract_uitvoerende:
+            if extr_uitvoerende_bool:
                 df = df.apply(extract_uitvoerende, axis=1) # Extract executing party from Omschrijving
             else:
                 df['Uitvoerende'] = ''  # Add empty column 'Uitvoerende'
