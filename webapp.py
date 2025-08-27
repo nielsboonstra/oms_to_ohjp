@@ -2,7 +2,22 @@ import streamlit as st
 import pandas as pd
 import regex as re
 
-st.set_page_config(page_title="OMS naar OHJP Conversie Tool", layout="wide")
+st.set_page_config(page_title="Maximo naar OHJP Conversie Tool", layout="wide")
+
+@st.dialog("Uitleg over de Maximo naar OHJP conversietool", width="large")
+def explanation_dialog():
+    st.markdown("### Input")
+    st.markdown("Om deze tool te kunnen gebruiken, heb je nodig:")
+    st.markdown("1. Een Excel-export vanuit Maximo.")
+    st.markdown("2. Een Excel-bestand met een Object-Complex mapping (zie het als een kleine decompositie van welke objecten onder welk complex hangen).")
+    st.markdown("Zorg ervoor dat deze bestanden de juiste structuur hebben, met in ieder geval de volgende elementen:")
+    st.markdown("- **Voor de OMS-export:** De kolommen _Omschrijving, _Taakplan omschrijving, Startdatum wk, Einddatum wk, PMnum, Interval_ en _Eenheid_")
+    st.markdown("- **Voor de Object-Complex mapping:** Een Excel met twee kolommen, waarvan één kolom de objecten bevat met exact dezelfde naam als in de OMS-export, met daarnaast een tweede kolom die het bijbehorende complex representeert.")
+    st.divider()
+    st.markdown("### Output")
+    st.markdown("Na het uploaden van de bestanden en het bijstellen van de juiste variabelen (Startjaar, startweek, en naam van het exportbestand), zal de tool één .xlsx-bestand genereren dat de volgende data bevat:")
+    st.markdown("- Per complex is één individueel Excel-tabblad gegenereerd met de objecten die onder dat complex vallen.")
+    st.markdown("- In elk tabblad is een heatmap-achtige structuur gecreëerd. Na de kolommen Object, Omschrijving, Interval (frequentie/maand), Uitvoerende en Taakplan omschrijving, worden de geplande werkzaamheden weergegeven met numerieke waarden. Als er een waarde >=1 in de cel voorkomt, betekent dit dat de taak gepland is voor die specifieke week.")
 
 @st.cache_data
 def load_excel(file, header=0):
@@ -128,10 +143,13 @@ def adapt_to_version(heatmap_df, version=1):
     return heatmap_df
 
 
-st.title("🗓️ OMS naar OHJP Conversie Tool")
+st.title("🗓️ Maximo naar OHJP Conversie Tool")
 
-st.write("Deze tool helpt jou met het omzetten van een OMS-export uit Maximo naar een OHJP-worksheet" \
+st.write("Deze tool helpt jou met het omzetten van een Maximo-export uit Maximo naar een OHJP-worksheet" \
 " voor het opzetten van een onderhoudsjaarplan.")
+
+if st.button("Meer uitleg over deze tool", icon="ℹ️"):
+    explanation_dialog()
 
 with st.sidebar:
     st.markdown("**1. Upload een OMS-exportbestand (Excel-format) om te beginnen:** 👇")
@@ -178,6 +196,7 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
     start_week = st.number_input("Kies de startweek voor de planning:", min_value=1, max_value=52, value=36)
     naam_export = st.text_input("Kies de naam voor het exportbestand (zonder extensie):", value="OHJP [X]e contractjaar [PROJECT]")
     version_export = st.pills("Kies de versie van de OHJP-export:", ["1: Definitieve versie", "2: Tijdelijke versie met kolommen 'Nummer', 'Taakplannr.' en 'Route'"], default="1: Definitieve versie")
+    saem_extract_uitvoerende = st.checkbox("🌊 SAEM-only: Zoek de uitvoerende partijen (LEV/OA) in de exportregels", value=True,)
 
     if st.button("Start conversie"):
         with st.spinner("Bezig met het converteren van de OMS-export naar OHJP...", show_time=True):
@@ -185,7 +204,10 @@ if 'df' in st.session_state and 'complex_mapping' in st.session_state:
             df = filter_columns(df)
             df = df.dropna(subset=["Omschrijving"]) #If Omschrijving is empty, drop row
             df = df.apply(normalize_frequency, axis=1) # Transform all frequencies that are not in Months to Months
-            df = df.apply(extract_uitvoerende, axis=1) # Extract executing party from Omschrijving
+            if saem_extract_uitvoerende:
+                df = df.apply(extract_uitvoerende, axis=1) # Extract executing party from Omschrijving
+            else:
+                df['Uitvoerende'] = ''  # Add empty column 'Uitvoerende'
             df['Complex'] = df['Object'].map(df_object_complex[complex_name_column])
             #Turn Startdatum and Einddatum wk into integers
             df["Startdatum wk"] = df["Startdatum wk"].astype(int)
